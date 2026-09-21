@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { animate } from 'animejs'
+import { flattenStack } from '../lib/gemini'
 import AppShell from './AppShell'
 
 export default function LoadingState({ inputs }) {
@@ -33,6 +34,12 @@ export default function LoadingState({ inputs }) {
     return () => anims.forEach((a) => a.pause())
   }, [])
 
+  const allTech = flattenStack(inputs.stack)
+  const domain =
+    inputs.domainInterest && inputs.domainInterest !== 'No Preference'
+      ? inputs.domainInterest.toUpperCase()
+      : null
+
   return (
     <AppShell statusLabel="GenAI Scoper Active" subLabel="Processing Machine-Scoping Logic">
       <div className="bg-surface border border-border rounded-lg p-12 w-[540px] shadow-[0_8px_12px_rgba(0,0,0,0.5)] flex flex-col items-center gap-8">
@@ -50,9 +57,15 @@ export default function LoadingState({ inputs }) {
             <div ref={barRef} className="bg-accent h-full" style={{ width: '20%' }} />
           </div>
           <div className="flex flex-col items-center gap-1 pt-3 font-mono text-[11px]">
-            <p className="text-accent">{`> ANALYZING: [${inputs.stack.join(', ')}]...`}</p>
-            <p className="text-textFaint">{`SCOPING MILESTONES FOR '${inputs.goal.toUpperCase()}'...`}</p>
-            <p className="text-textFaint">{`TIMEFRAME ESTIMATE: ${inputs.timeFrame.toUpperCase()}`}</p>
+            <p className="text-accent">{`> ANALYZING: [${allTech.join(', ')}]...`}</p>
+            <p className="text-textFaint">
+              {`SCOPING MILESTONES FOR '${inputs.goal.toUpperCase()}'`}
+              {domain ? ` × ${domain}` : ''}
+              {'...'}
+            </p>
+            <p className="text-textFaint">
+              {`FOCUS: ${(inputs.strongestArea || 'GENERAL').toUpperCase()} | TIMEFRAME: ${inputs.timeFrame.toUpperCase()}`}
+            </p>
           </div>
         </div>
       </div>

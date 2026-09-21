@@ -24,16 +24,68 @@ const SCHEMA = {
   required: ['project_title', 'description', 'why_it_fits', 'tech_stack', 'milestones'],
 }
 
-export async function generateRoadmap({ skillLevel, stack, goal, timeFrame }) {
+/**
+ * Flatten the grouped stack object into a single string array.
+ * Also handles the legacy flat-array format for backwards compat.
+ */
+export function flattenStack(stack) {
+  if (Array.isArray(stack)) return stack
+  return [
+    ...(stack.languages || []),
+    ...(stack.frameworks || []),
+    ...(stack.databases || []),
+    ...(stack.cloud || []),
+  ].filter(Boolean)
+}
+
+export async function generateRoadmap({
+  skillLevel,
+  strongestArea,
+  stack,
+  goal,
+  timeFrame,
+  domainInterest,
+  constraints,
+  priorProjects,
+}) {
+  const allTech = flattenStack(stack)
+
+  // Build constraint instructions
+  const constraintLines = []
+  if (constraints?.openSource) {
+    constraintLines.push(
+      '- The project MUST be suitable for open-source publication (no proprietary APIs or closed-source dependencies required).',
+    )
+  }
+  if (constraints?.noCrud) {
+    constraintLines.push(
+      '- Do NOT suggest a basic CRUD app. The project must have genuine engineering depth — think real-time features, data pipelines, CLI tools, browser extensions, algorithms, etc.',
+    )
+  }
+  const constraintBlock = constraintLines.length
+    ? `\nHard constraints:\n${constraintLines.join('\n')}`
+    : ''
+
+  const domainLine =
+    domainInterest && domainInterest !== 'No Preference'
+      ? `\nPreferred domain: ${domainInterest}`
+      : ''
+
+  const priorBlock = priorProjects
+    ? `\nProjects the student has already built (avoid suggesting something too similar):\n${priorProjects}`
+    : ''
+
   const prompt = `You are a technical mentor for CS students. Based on the student's profile below, generate ONE specific, well-scoped project idea and a milestone breakdown.
 
 Skill level: ${skillLevel}
-Known tech stack: ${stack.join(', ')}
+Strongest area: ${strongestArea || 'General'}
+Known tech stack: ${allTech.join(', ') || 'None specified'}
 Career goal: ${goal}
-Time available: ${timeFrame}
+Time available: ${timeFrame}${domainLine}${constraintBlock}${priorBlock}
 
 Requirements:
 - The project must be realistically achievable within the given time frame.
+- Leverage the student's strongest area (${strongestArea || 'General'}) while stretching them slightly into complementary skills.
 - Prefer projects with genuine engineering depth over another CRUD app, when the time frame allows for it.
 - Milestones must be ordered, concrete, and each independently demoable.
 - "estimated_time" should be a short range like "Day 1 - 3".
@@ -51,7 +103,7 @@ Requirements:
           responseSchema: SCHEMA,
         },
       }),
-    }
+    },
   )
 
   if (!response.ok) {
