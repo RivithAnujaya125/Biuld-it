@@ -51,7 +51,7 @@ function TagGroup({ label, tags, onAdd, onRemove }) {
 }
 
 /* ── Main form ───────────────────────────────────────────────────────── */
-export default function InputForm({ onGenerate }) {
+export default function InputForm({ onGenerate, onOpenDashboard }) {
   // ── state ──
   const [skillLevel, setSkillLevel] = useState('Intermediate')
   const [strongestArea, setStrongestArea] = useState('Frontend')
@@ -100,7 +100,7 @@ export default function InputForm({ onGenerate }) {
   }
 
   return (
-    <AppShell statusLabel="GenAI Scoper Active" subLabel="Configuration Panel">
+    <AppShell statusLabel="GenAI Scoper Active" subLabel="Configuration Panel" onOpenDashboard={onOpenDashboard}>
       <div
         ref={cardRef}
         style={{ opacity: 0 }}

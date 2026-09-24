@@ -1,6 +1,6 @@
 import { FileCode2, Github } from 'lucide-react'
 
-export default function AppShell({ statusLabel, subLabel, children }) {
+export default function AppShell({ statusLabel, subLabel, onOpenDashboard, children }) {
   return (
     <div className="bg-bg min-h-screen flex flex-col">
       <header className="bg-bg border-b border-border h-16 flex items-center justify-between px-12 shrink-0">
@@ -15,7 +15,17 @@ export default function AppShell({ statusLabel, subLabel, children }) {
         </div>
         <div className="flex items-center gap-6 text-textMuted text-[13px]">
           <span>Documentation</span>
-          <span>Templates</span>
+          {onOpenDashboard ? (
+            <button
+              type="button"
+              onClick={onOpenDashboard}
+              className="hover:text-textPrimary transition-colors cursor-pointer text-[13px]"
+            >
+              Dashboard
+            </button>
+          ) : (
+            <span>Dashboard</span>
+          )}
           <div className="h-4 w-px bg-border" />
           <div className="flex items-center gap-2 font-mono text-xs">
             <Github size={16} />
