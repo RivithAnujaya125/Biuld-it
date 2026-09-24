@@ -17,7 +17,6 @@ export default function HeroLogin({ onProceed, onNavigate }) {
   const [isAnimatingOut, setIsAnimatingOut] = useState(false)
   const [typedTitle, setTypedTitle] = useState('')
   const [activeModal, setActiveModal] = useState(null)
-  const [inviteKey, setInviteKey] = useState('')
 
   const hamburgerRef = useRef(null)
 
@@ -180,25 +179,6 @@ export default function HeroLogin({ onProceed, onNavigate }) {
     } finally {
       setIsVerifyingGithub(false)
     }
-  }
-
-  const handleInviteKeyClick = (e) => {
-    e.preventDefault()
-    setActiveModal({
-      title: 'INVITE KEY ENTRY',
-      text: 'Enter your 16-character E network invite key to claim priority Biuld-it voice allocation.',
-      type: 'invite',
-    })
-  }
-
-  const handleVerifyInviteKey = (e) => {
-    e.preventDefault()
-    if (!inviteKey.trim()) return
-    setActiveModal({
-      title: 'KEY VALIDATED',
-      text: `Invite key "${inviteKey.trim().toUpperCase()}" verified. Voice profile slot reserved on the E network for Biuld-it.`,
-    })
-    setInviteKey('')
   }
 
   const handleResetForm = () => {
@@ -388,16 +368,6 @@ export default function HeroLogin({ onProceed, onNavigate }) {
                   {isVerifyingGithub ? 'VERIFYING...' : 'ACCESS'}
                 </button>
               </form>
-
-              {/* 5) REFERRAL LINK */}
-              <button
-                type="button"
-                className="referral-link"
-                onClick={handleInviteKeyClick}
-                style={{ display: 'block', width: '100%', textAlign: 'center' }}
-              >
-                I'VE GOT AN INVITE KEY
-              </button>
             </div>
           ) : (
             <div className="success-card success-card--visible">
@@ -502,29 +472,6 @@ export default function HeroLogin({ onProceed, onNavigate }) {
               {activeModal.title}
             </h2>
             <p className="modal-text">{activeModal.text}</p>
-
-            {activeModal.type === 'invite' && (
-              <form onSubmit={handleVerifyInviteKey} style={{ width: '100%' }}>
-                <input
-                  type="text"
-                  className="form__input"
-                  placeholder="e.g. BUILD-9982-EXYZ"
-                  value={inviteKey}
-                  onChange={(e) => setInviteKey(e.target.value)}
-                  autoFocus
-                  style={{ marginBottom: '16px' }}
-                />
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                  <button
-                    type="submit"
-                    className="modal-close"
-                    style={{ background: 'var(--fill-solid)' }}
-                  >
-                    SUBMIT KEY
-                  </button>
-                </div>
-              </form>
-            )}
 
             <button
               type="button"
