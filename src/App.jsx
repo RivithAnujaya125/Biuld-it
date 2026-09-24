@@ -6,7 +6,7 @@ import HeroLogin from './components/HeroLogin'
 import InputForm from './components/InputForm'
 import LoadingState from './components/LoadingState'
 import ResultsScreen from './components/ResultsScreen'
-import DashboardPlaceholder from './components/DashboardPlaceholder'
+import Dashboard from './components/Dashboard'
 import { generateRoadmap } from './lib/gemini'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { saveRoadmap } from './lib/roadmaps'
@@ -111,9 +111,13 @@ function AppContent() {
           />
         )}
         {view === 'dashboard' && (
-          <DashboardPlaceholder
-            onBack={() => setView('input')}
-            onBackToHero={() => setView('hero')}
+          <Dashboard
+            onNewRoadmap={() => setView('input')}
+            onSelectRoadmap={(selectedRoadmap) => {
+              setResult(selectedRoadmap)
+              setView('results')
+            }}
+            onHome={() => setView('hero')}
           />
         )}
         {error && (
