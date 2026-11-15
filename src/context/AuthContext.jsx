@@ -11,11 +11,16 @@ const AuthContext = createContext({
   loading: true,
   signInWithGithub: async () => {},
   signOut: async () => {},
+  // Dev bypass flag so the Figma Welcome homepage can be previewed
+  // without completing Firebase GitHub OAuth.
+  devBypass: false,
+  setDevBypass: () => {},
 })
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [devBypass, setDevBypass] = useState(false)
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -37,6 +42,7 @@ export function AuthProvider({ children }) {
 
   const signOut = async () => {
     try {
+      setDevBypass(false)
       await fbSignOut(auth)
     } catch (error) {
       console.error('Error signing out:', error)
@@ -45,7 +51,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGithub, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signInWithGithub, signOut, devBypass, setDevBypass }}>
       {children}
     </AuthContext.Provider>
   )
@@ -60,3 +66,4 @@ export function useAuth() {
 }
 
 export default AuthContext
+

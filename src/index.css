@@ -2,6 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 4% 10%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 4% 10%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 187 100% 50%;
+    --primary-foreground: 240 10% 3.9%;
+    --secondary: 240 4% 16%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 4% 9%;
+    --muted-foreground: 240 5% 65%;
+    --accent: 187 100% 50%;
+    --accent-foreground: 240 10% 3.9%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 4% 16%;
+    --input: 240 4% 16%;
+    --ring: 187 100% 50%;
+    --radius: 0.625rem;
+    --chart-1: #00f0ff;
+    --chart-2: #a1a1aa;
+    --chart-3: #717680;
+    --chart-4: #fafafa;
+    --chart-5: #27272a;
+  }
+}
+
 :root {
   --bg: #000000;
   --text: #ffffff;
@@ -122,6 +152,18 @@ body.menu-open {
   color: #ffffff;
   text-decoration: none;
   line-height: 1;
+}
+
+/* Transparent text-only wordmark used on every page/header/footer.
+   Same Sora-light + wide-tracking look as the login page `.logo`. */
+.brand-wordmark {
+  font-family: var(--font-display);
+  font-weight: 200;
+  letter-spacing: 0.16em;
+  color: #ffffff;
+  background: transparent;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .nav__cluster {
@@ -903,3 +945,58 @@ body.menu-open {
   .dashboard-page .repo-row { flex-direction: column; align-items: flex-start; gap: 10px; }
   .dashboard-page .repo-row__action { width: 100%; text-align: center; }
 }
+
+/* ─────────────────────────────────────────────────────────────
+   AMBIENT BACKGROUND GRID (AppShell Cohesion Layer)
+   ───────────────────────────────────────────────────────────── */
+
+.ambient-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.10;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.18) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.18) 1px, transparent 1px);
+  background-size: 36px 36px;
+  background-position: 0 0;
+  animation: ambientGridPan 30s linear infinite;
+  mask-image: radial-gradient(circle at center, black 35%, transparent 85%);
+  -webkit-mask-image: radial-gradient(circle at center, black 35%, transparent 85%);
+}
+
+@keyframes ambientGridPan {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 72px 72px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-grid {
+    animation: none !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   FIGMA MAKE HOMEPAGE (src/pages/HomePage.jsx) support layer
+   Tokens mirror Tailwind v3 config so JSX classes always resolve,
+   even if purge/safelist ever misses a dash-token variant.
+   ───────────────────────────────────────────────────────────── */
+
+@keyframes cursor-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.ambient-glow {
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 40%, rgba(0, 240, 255, 0.55) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 35% at 30% 60%, rgba(0, 240, 255, 0.22) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 35% at 70% 60%, rgba(0, 240, 255, 0.22) 0%, transparent 70%);
+  filter: blur(60px);
+}
+

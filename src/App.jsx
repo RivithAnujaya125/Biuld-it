@@ -1,8 +1,8 @@
 import { useState, useRef, useLayoutEffect, useEffect } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { ScrollSmoother } from 'gsap/ScrollSmoother'
 import HeroLogin from './components/HeroLogin'
+import HomePage from './pages/HomePage'
 import InputForm from './components/InputForm'
 import LoadingState from './components/LoadingState'
 import ResultsScreen from './components/ResultsScreen'
@@ -10,27 +10,77 @@ import Dashboard from './components/Dashboard'
 import { generateRoadmap } from './lib/gemini'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { saveRoadmap } from './lib/roadmaps'
+import { isReducedMotion } from './lib/motion'
 
-gsap.registerPlugin(ScrollTrigger, ScrollSmoother)
+gsap.registerPlugin(ScrollTrigger)
 
 function AppContent() {
-  const [view, setView] = useState('hero') // 'hero' | 'input' | 'loading' | 'results' | 'dashboard'
+  // 'hero' = login gate | 'home' = Figma Welcome homepage (post-login)
+  const [view, setView] = useState('hero') // 'hero' | 'home' | 'input' | 'loading' | 'results' | 'dashboard'
   const [inputs, setInputs] = useState(null)
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
-  const smootherRef = useRef(null)
+  const viewContainerRef = useRef(null)
+  const isTransitioningRef = useRef(false)
   const { user } = useAuth()
+
+  // Smooth GSAP screen transition helper (150ms fade-out -> 200ms fade-in)
+  const transitionTo = (nextView, updateFn) => {
+    if (isReducedMotion()) {
+      if (updateFn) updateFn()
+      setView(nextView)
+      return
+    }
+
+    const container = viewContainerRef.current
+    if (!container || isTransitioningRef.current) {
+      if (updateFn) updateFn()
+      setView(nextView)
+      return
+    }
+
+    isTransitioningRef.current = true
+    // Outgoing screen fades out (150ms)
+    gsap.to(container, {
+      opacity: 0,
+      duration: 0.15,
+      ease: 'power2.in',
+      onComplete: () => {
+        if (updateFn) updateFn()
+        setView(nextView)
+        window.scrollTo(0, 0)
+        requestAnimationFrame(() => {
+          // Incoming screen fades in (200ms)
+          gsap.fromTo(
+            container,
+            { opacity: 0 },
+            {
+              opacity: 1,
+              duration: 0.2,
+              ease: 'power2.out',
+              onComplete: () => {
+                isTransitioningRef.current = false
+                ScrollTrigger.refresh()
+              },
+            }
+          )
+        })
+      },
+    })
+  }
 
   // Support hash routing (#dashboard, #generator, #home, etc.)
   useEffect(() => {
     const handleHash = () => {
       const hash = window.location.hash.replace('#', '')
       if (hash === 'dashboard') {
-        setView('dashboard')
+        transitionTo('dashboard')
       } else if (hash === 'generator' || hash === 'input') {
-        setView('input')
-      } else if (hash === 'home' || hash === 'hero') {
-        setView('hero')
+        transitionTo('input')
+      } else if (hash === 'home') {
+        transitionTo('home')
+      } else if (hash === 'hero') {
+        transitionTo('hero')
       }
     }
     handleHash()
@@ -38,88 +88,101 @@ function AppContent() {
     return () => window.removeEventListener('hashchange', handleHash)
   }, [])
 
-  // Create the smoother once, on mount.
+  // Resync ScrollTrigger when view changes (ScrollSmoother removed:
+  // Club Green plugin requires a paid license and breaks `npm run dev`).
   useLayoutEffect(() => {
-    smootherRef.current = ScrollSmoother.create({
-      wrapper: '#smooth-wrapper',
-      content: '#smooth-content',
-      smooth: 1.2,
-      effects: true,
-    })
-    return () => smootherRef.current?.kill()
-  }, [])
-
-  // Resync smoother & ScrollTrigger when view changes
-  useLayoutEffect(() => {
-    smootherRef.current?.scrollTo(0, false)
+    window.scrollTo(0, 0)
     const id = requestAnimationFrame(() => ScrollTrigger.refresh())
     return () => cancelAnimationFrame(id)
   }, [view])
 
-  const handleGenerate = async (formInputs) => {
+  const handleGenerate = (formInputs) => {
     setInputs(formInputs)
-    setView('loading')
     setError(null)
-    try {
-      const data = await generateRoadmap(formInputs)
-      const fullResult = { ...data, timeframe_label: formInputs.timeFrame }
-      setResult(fullResult)
-      setView('results')
+    transitionTo('loading')
 
-      // If a user is signed in, automatically save the generated roadmap to Firestore
-      if (user?.uid) {
-        try {
-          await saveRoadmap(user.uid, fullResult)
-        } catch (saveErr) {
-          console.error('Silent error saving roadmap to Firestore:', saveErr)
+    ;(async () => {
+      try {
+        const data = await generateRoadmap(formInputs)
+        const fullResult = {
+          ...data,
+          timeframe_label: formInputs.timeFrame,
+          // persist the 3 additive wizard inputs so saved roadmaps in the
+          // dashboard can show scoping context (weekly hours etc.)
+          growthFocus: formInputs.growthFocus,
+          projectPurpose: formInputs.projectPurpose,
+          weeklyHours: formInputs.weeklyHours,
         }
+        setResult(fullResult)
+        transitionTo('results')
+
+        // If a user is signed in, automatically save the generated roadmap to Firestore
+        if (user?.uid) {
+          try {
+            await saveRoadmap(user.uid, fullResult)
+          } catch (saveErr) {
+            console.error('Silent error saving roadmap to Firestore:', saveErr)
+          }
+        }
+      } catch (err) {
+        console.error(err)
+        setError(err.message)
+        transitionTo('input')
       }
-    } catch (err) {
-      console.error(err)
-      setError(err.message)
-      setView('input')
-    }
+    })()
   }
 
   const handleRegenerate = () => inputs && handleGenerate(inputs)
-  const handleAdjust = () => setView('input')
+  const handleAdjust = () => transitionTo('input')
 
+  // ScrollSmoother wrapper removed with the Club plugin — keep a plain
+  // container so the fixed-position CSS in index.css no longer traps scroll.
   return (
-    <div id="smooth-wrapper">
-      <div id="smooth-content">
-        {view === 'hero' && (
-          <HeroLogin
-            onProceed={() => setView('input')}
-            onNavigate={(targetView) => setView(targetView)}
-          />
-        )}
-        {view === 'input' && (
-          <InputForm
-            onGenerate={handleGenerate}
-            onOpenDashboard={() => setView('dashboard')}
-            onBackToHero={() => setView('hero')}
-          />
-        )}
-        {view === 'loading' && inputs && <LoadingState inputs={inputs} />}
-        {view === 'results' && result && (
-          <ResultsScreen
-            result={result}
-            onRegenerate={handleRegenerate}
-            onAdjust={handleAdjust}
-            onOpenDashboard={() => setView('dashboard')}
-            onBackToHero={() => setView('hero')}
-          />
-        )}
-        {view === 'dashboard' && (
-          <Dashboard
-            onNewRoadmap={() => setView('input')}
-            onSelectRoadmap={(selectedRoadmap) => {
-              setResult(selectedRoadmap)
-              setView('results')
-            }}
-            onHome={() => setView('hero')}
-          />
-        )}
+    <div className="min-h-screen bg-bg">
+      <div>
+        <div ref={viewContainerRef} className="w-full">
+          {view === 'hero' && (
+            <HeroLogin
+              onProceed={() => transitionTo('home')}
+              onNavigate={(targetView) => transitionTo(targetView)}
+            />
+          )}
+          {view === 'home' && (
+            <HomePage
+              user={user}
+              onOpenDashboard={() => transitionTo('dashboard')}
+              onGenerate={() => transitionTo('input')}
+              onHome={() => transitionTo('hero')}
+            />
+          )}
+          {view === 'input' && (
+            <InputForm
+              onGenerate={handleGenerate}
+              onOpenDashboard={() => transitionTo('dashboard')}
+              onBackToHero={() => transitionTo('home')}
+            />
+          )}
+          {view === 'loading' && inputs && <LoadingState inputs={inputs} />}
+          {view === 'results' && result && (
+            <ResultsScreen
+              result={result}
+              onRegenerate={handleRegenerate}
+              onAdjust={handleAdjust}
+              onOpenDashboard={() => transitionTo('dashboard')}
+              onBackToHero={() => transitionTo('home')}
+            />
+          )}
+          {view === 'dashboard' && (
+            <Dashboard
+              onNewRoadmap={() => transitionTo('input')}
+              onSelectRoadmap={(selectedRoadmap) => {
+                setResult(selectedRoadmap)
+                transitionTo('results')
+              }}
+              onHome={() => transitionTo('home')}
+            />
+          )}
+        </div>
         {error && (
           <div className="fixed bottom-4 right-4 bg-red-950 border border-red-700 text-red-200 text-sm px-4 py-3 rounded-md max-w-sm z-50">
             {error}
@@ -137,3 +200,4 @@ export default function App() {
     </AuthProvider>
   )
 }
+

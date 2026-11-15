@@ -1,14 +1,51 @@
 import { useEffect, useRef } from 'react'
 import { animate } from 'animejs'
+import { gsap } from 'gsap'
 import { flattenStack } from '../lib/gemini'
 import AppShell from './AppShell'
+import { isReducedMotion } from '../lib/motion'
 
 export default function LoadingState({ inputs }) {
+  const cardRef = useRef(null)
   const ringRef = useRef(null)
   const dotRef = useRef(null)
   const barRef = useRef(null)
 
   useEffect(() => {
+    if (isReducedMotion()) {
+      if (cardRef.current) {
+        cardRef.current.style.opacity = '1'
+        cardRef.current.style.transform = 'none'
+      }
+      return
+    }
+
+    // Card entrance
+    animate(cardRef.current, {
+      opacity: [0, 1],
+      y: [16, 0],
+      duration: 500,
+      ease: 'outQuad',
+    })
+
+    // Inner items entrance stagger
+    const staggerItems = cardRef.current?.querySelectorAll('.loading-stagger-item')
+    if (staggerItems && staggerItems.length > 0) {
+      gsap.fromTo(
+        staggerItems,
+        { opacity: 0, y: 12 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.4,
+          stagger: 0.06,
+          ease: 'power2.out',
+          delay: 0.04,
+        }
+      )
+    }
+
+    // Continuous loading loop animations
     const anims = [
       animate(ringRef.current, {
         rotate: 360,
@@ -41,9 +78,13 @@ export default function LoadingState({ inputs }) {
       : null
 
   return (
-    <AppShell statusLabel="GenAI Scoper Active" subLabel="Processing Machine-Scoping Logic">
-      <div className="bg-surface border border-border rounded-lg p-12 w-[540px] shadow-[0_8px_12px_rgba(0,0,0,0.5)] flex flex-col items-center gap-8">
-        <div className="relative w-[72px] h-[72px] flex items-center justify-center">
+    <AppShell>
+      <div
+        ref={cardRef}
+        style={{ opacity: 0 }}
+        className="bg-surface border border-border rounded-lg p-12 w-[540px] shadow-[0_8px_12px_rgba(0,0,0,0.5)] flex flex-col items-center gap-8"
+      >
+        <div className="loading-stagger-item relative w-[72px] h-[72px] flex items-center justify-center">
           <div
             ref={ringRef}
             className="absolute w-[72px] h-[72px] rounded-full border-2 border-dashed border-accent/50"
@@ -51,7 +92,7 @@ export default function LoadingState({ inputs }) {
           <div className="absolute w-[52px] h-[52px] rounded-full border-2 border-border" />
           <div ref={dotRef} className="w-6 h-6 rounded-full bg-accent" />
         </div>
-        <div className="flex flex-col items-center gap-3 w-full">
+        <div className="loading-stagger-item flex flex-col items-center gap-3 w-full">
           <p className="font-bold text-textPrimary text-base">Synthesizing Project Scaffolding</p>
           <div className="bg-surfaceMuted h-1 w-[280px] rounded-full overflow-hidden">
             <div ref={barRef} className="bg-accent h-full" style={{ width: '20%' }} />

@@ -9,7 +9,7 @@ const POSTER_URL =
 const TARGET_TITLE = 'Biuld-it'
 
 export default function HeroLogin({ onProceed, onNavigate }) {
-  const { user, signInWithGithub } = useAuth()
+  const { user, signInWithGithub, devBypass, setDevBypass } = useAuth()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [githubUsername, setGithubUsername] = useState('')
   const [isSubmitted, setIsSubmitted] = useState(false)
@@ -182,6 +182,7 @@ export default function HeroLogin({ onProceed, onNavigate }) {
   }
 
   const handleResetForm = () => {
+    setDevBypass(false)
     setIsSubmitted(false)
     setGithubUsername('')
   }
@@ -403,7 +404,7 @@ export default function HeroLogin({ onProceed, onNavigate }) {
                 onClick={onProceed}
                 style={{ marginTop: '8px' }}
               >
-                START BUILDING ROADMAP
+                CONTINUE TO HOMEPAGE
               </button>
 
               <button
@@ -415,6 +416,24 @@ export default function HeroLogin({ onProceed, onNavigate }) {
                 ENTER ANOTHER USERNAME
               </button>
             </div>
+          )}
+          {!isSubmitted && !user && (
+            <button
+              type="button"
+              className="btn btn--ghost"
+              style={{ marginTop: '12px', fontSize: '11px', opacity: 0.85 }}
+              onClick={() => {
+                setDevBypass(true)
+                onProceed?.()
+              }}
+            >
+              SKIP LOGIN — PREVIEW HOMEPAGE
+            </button>
+          )}
+          {devBypass && !user && isSubmitted && (
+            <p className="success-msg" style={{ marginTop: '4px', fontSize: '11px' }}>
+              Preview mode — Firebase auth is bypassed.
+            </p>
           )}
         </div>
       </main>

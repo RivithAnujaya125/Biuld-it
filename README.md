@@ -28,8 +28,7 @@ An intelligent, AI-powered project scoper and progress verifier designed for Com
 Create a `.env` file in the root directory (refer to `.env.example`):
 
 ```env
-# Gemini API Keys
-VITE_GEMINI_API_KEY=your_gemini_api_key
+# Gemini API Key (server-only — never use a VITE_ prefix)
 GEMINI_API_KEY=your_gemini_api_key
 
 # Firebase Configuration
@@ -42,6 +41,10 @@ VITE_FIREBASE_APP_ID=1:1066217853664:web:5626d48060184d572f3685
 
 # Optional: GitHub Personal Access Token (raises rate limit from 60 req/hr to 5,000 req/hr)
 # GITHUB_TOKEN=your_github_personal_access_token
+
+# Optional hardening:
+# REQUIRE_AUTH=true (require Firebase ID token on /api/*)
+# ALLOWED_ORIGIN=https://your-domain.com (restrict CORS)
 ```
 
 ---

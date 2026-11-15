@@ -35,7 +35,7 @@ export default function DashboardPlaceholder({ onBack }) {
   }, [user])
 
   return (
-    <AppShell statusLabel="Dashboard Scaffolding Active" subLabel="Roadmaps Scaffolding / Figma Placeholder">
+    <AppShell>
       <div className="bg-surface border border-border rounded-lg p-10 w-[760px] shadow-[0_8px_12px_rgba(0,0,0,0.5)] flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">

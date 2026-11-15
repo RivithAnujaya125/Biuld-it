@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { animate } from 'animejs'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import {
@@ -17,6 +18,9 @@ import {
 } from 'lucide-react'
 import AppShell from './AppShell'
 import VerificationLoading from './VerificationLoading'
+import { ResumeBulletCallout } from './ResumeBulletCallout'
+import { isReducedMotion, triggerBounce } from '../lib/motion'
+import { auth } from '../lib/firebase'
 
 export default function ResultsScreen({ result, onRegenerate, onAdjust, onOpenDashboard }) {
   const containerRef = useRef(null)
@@ -35,6 +39,39 @@ export default function ResultsScreen({ result, onRegenerate, onAdjust, onOpenDa
   }
 
   useEffect(() => {
+    if (isReducedMotion()) {
+      if (containerRef.current) {
+        containerRef.current.style.opacity = '1'
+        containerRef.current.style.transform = 'none'
+      }
+      return
+    }
+
+    // Card entrance
+    animate(containerRef.current, {
+      opacity: [0, 1],
+      y: [16, 0],
+      duration: 500,
+      ease: 'outQuad',
+    })
+
+    // Inner sections stagger in right after
+    const staggerItems = containerRef.current?.querySelectorAll('.results-stagger-item')
+    if (staggerItems && staggerItems.length > 0) {
+      gsap.fromTo(
+        staggerItems,
+        { opacity: 0, y: 12 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.4,
+          stagger: 0.06,
+          ease: 'power2.out',
+          delay: 0.04,
+        }
+      )
+    }
+
     const ctx = gsap.context(() => {
       gsap.from(milestoneRefs.current, {
         opacity: 0,
@@ -67,9 +104,16 @@ export default function ResultsScreen({ result, onRegenerate, onAdjust, onOpenDa
     setError(null)
 
     try {
+      const headers = { 'Content-Type': 'application/json' }
+      try {
+        const token = await auth?.currentUser?.getIdToken?.()
+        if (token) headers.Authorization = `Bearer ${token}`
+      } catch {
+        // anonymous verify allowed unless REQUIRE_AUTH=true server-side
+      }
       const response = await fetch('/api/verify', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           repoUrl: repoUrl.trim(),
           milestones: result.milestones,
@@ -117,16 +161,15 @@ export default function ResultsScreen({ result, onRegenerate, onAdjust, onOpenDa
 
   return (
     <AppShell
-      statusLabel="GenAI Scoper Active"
-      subLabel="Output Scopes / Code Generation Completed"
       onOpenDashboard={onOpenDashboard}
     >
       <div
         ref={containerRef}
+        style={{ opacity: 0 }}
         className="bg-surface border border-border rounded-lg p-10 w-[760px] shadow-[0_8px_12px_rgba(0,0,0,0.5)] flex flex-col gap-8"
       >
         {/* Header Specification */}
-        <div className="flex flex-col gap-3">
+        <div className="results-stagger-item flex flex-col gap-3">
           <div className="flex items-center gap-2 font-mono text-[11px]">
             <span className="text-accent uppercase font-semibold">Recommended Specification</span>
             <span className="w-2 h-px bg-border" />
@@ -138,8 +181,13 @@ export default function ResultsScreen({ result, onRegenerate, onAdjust, onOpenDa
           <p className="text-textMuted text-base">{result.description}</p>
         </div>
 
+        {/* Resume one-liner — only when the model returns it (Resume Bullet purpose) */}
+        {result.resume_bullet && String(result.resume_bullet).trim() && (
+          <ResumeBulletCallout text={result.resume_bullet} />
+        )}
+
         {/* Why this fits */}
-        <div className="bg-accent/[0.03] border border-accent rounded-md p-5 flex flex-col gap-2">
+        <div className="results-stagger-item bg-accent/[0.03] border border-accent rounded-md p-5 flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <Lightbulb size={14} className="text-accent" />
             <span className="text-accent font-bold text-[13px]">Why this fits your profile</span>
@@ -148,7 +196,7 @@ export default function ResultsScreen({ result, onRegenerate, onAdjust, onOpenDa
         </div>
 
         {/* Tech Stack */}
-        <div className="flex flex-col gap-2">
+        <div className="results-stagger-item flex flex-col gap-2">
           <label className="text-xs font-semibold uppercase text-textMuted">Project Tech Stack</label>
           <div className="flex flex-wrap gap-2">
             {result.tech_stack.map((tech) => (
@@ -165,7 +213,7 @@ export default function ResultsScreen({ result, onRegenerate, onAdjust, onOpenDa
         <div className="h-px bg-border" />
 
         {/* Milestones Timeline */}
-        <div className="flex flex-col gap-6">
+        <div className="results-stagger-item flex flex-col gap-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <label className="text-xs font-semibold uppercase text-textMuted">
@@ -314,7 +362,7 @@ export default function ResultsScreen({ result, onRegenerate, onAdjust, onOpenDa
         <div className="h-px bg-border" />
 
         {/* VERIFY MY PROGRESS SECTION */}
-        <div className="bg-surfaceMuted border border-border rounded-lg p-6 flex flex-col gap-5">
+        <div className="results-stagger-item bg-surfaceMuted border border-border rounded-lg p-6 flex flex-col gap-5">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-md bg-accent/10 border border-accent/30 flex items-center justify-center text-accent">
@@ -396,7 +444,10 @@ export default function ResultsScreen({ result, onRegenerate, onAdjust, onOpenDa
                 </span>
                 <button
                   type="button"
-                  onClick={handleResetVerification}
+                  onClick={(e) => {
+                    triggerBounce(e.currentTarget)
+                    handleResetVerification()
+                  }}
                   className="flex items-center gap-1.5 text-xs font-mono text-textMuted hover:text-textPrimary transition-colors"
                 >
                   <RotateCcw size={12} />
@@ -425,6 +476,7 @@ export default function ResultsScreen({ result, onRegenerate, onAdjust, onOpenDa
                 <button
                   type="submit"
                   disabled={!repoUrl.trim()}
+                  onClick={(e) => triggerBounce(e.currentTarget)}
                   className="bg-accent text-bg hover:bg-accent/90 disabled:opacity-40 disabled:hover:bg-accent px-5 py-2.5 rounded-md font-bold text-xs flex items-center gap-2 transition-colors shrink-0"
                 >
                   <Sparkles size={14} />
@@ -441,17 +493,23 @@ export default function ResultsScreen({ result, onRegenerate, onAdjust, onOpenDa
         <div className="h-px bg-border" />
 
         {/* Footer actions */}
-        <div className="flex items-center justify-between">
+        <div className="results-stagger-item flex items-center justify-between">
           <button
             type="button"
-            onClick={onRegenerate}
+            onClick={(e) => {
+              triggerBounce(e.currentTarget)
+              onRegenerate()
+            }}
             className="bg-border px-5 py-3 rounded-md font-semibold text-textPrimary text-[13px] hover:bg-border/80 transition-colors"
           >
             Regenerate Idea
           </button>
           <button
             type="button"
-            onClick={onAdjust}
+            onClick={(e) => {
+              triggerBounce(e.currentTarget)
+              onAdjust()
+            }}
             className="px-5 py-3 rounded-md font-medium text-textMuted text-[13px] hover:text-textPrimary transition-colors"
           >
             Adjust inputs

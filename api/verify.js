@@ -1,5 +1,11 @@
-import fs from 'fs'
-import path from 'path'
+import {
+  setCors,
+  polyfillRes,
+  parseJsonBody,
+  getGeminiApiKey,
+  checkRateLimit,
+  authenticate,
+} from './_shared.js'
 
 /**
  * Serverless function: /api/verify
@@ -44,23 +50,6 @@ const IGNORED_FILES = new Set([
 const MAX_TOTAL_CHARS = 1_200_000 // ~300K tokens
 const MAX_SINGLE_FILE_CHARS = 60_000
 
-// Helper to resolve Gemini API key from process.env or local .env
-function getGeminiApiKey() {
-  if (process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY
-  if (process.env.VITE_GEMINI_API_KEY) return process.env.VITE_GEMINI_API_KEY
-  try {
-    const envPath = path.resolve(process.cwd(), '.env')
-    if (fs.existsSync(envPath)) {
-      const content = fs.readFileSync(envPath, 'utf8')
-      const m = content.match(/(?:VITE_)?GEMINI_API_KEY\s*=\s*(.+)/)
-      if (m) return m[1].trim()
-    }
-  } catch (err) {
-    console.warn('Could not read .env file:', err.message)
-  }
-  return null
-}
-
 // Parse GitHub URL to extract owner and repository name
 export function parseGitHubUrl(url) {
   if (!url || typeof url !== 'string') return null
@@ -74,26 +63,10 @@ export function parseGitHubUrl(url) {
 }
 
 export default async function handler(req, res) {
-  // Polyfill response helpers for standard Node / Vite middleware environments
-  if (!res.status) {
-    res.status = (code) => {
-      res.statusCode = code
-      return res
-    }
-  }
-  if (!res.json) {
-    res.json = (data) => {
-      res.setHeader('Content-Type', 'application/json')
-      res.end(JSON.stringify(data))
-      return res
-    }
-  }
+  polyfillRes(res)
+  setCors(req, res)
 
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', '*')
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
     return res.status(204).end()
   }
 
@@ -101,26 +74,25 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed. Use POST.' })
   }
 
-  // Parse request body if not already parsed
-  let body = req.body
-  if (!body) {
-    try {
-      const raw = await new Promise((resolve, reject) => {
-        let acc = ''
-        req.on('data', (c) => { acc += c })
-        req.on('end', () => resolve(acc))
-        req.on('error', reject)
-      })
-      body = raw ? JSON.parse(raw) : {}
-    } catch (e) {
-      return res.status(400).json({ error: 'Malformed JSON body.' })
-    }
-  } else if (typeof body === 'string') {
-    try {
-      body = JSON.parse(body)
-    } catch (e) {
-      return res.status(400).json({ error: 'Malformed JSON body.' })
-    }
+  // Rate limit: verification fans out to GitHub + Gemini, keep it tight.
+  // Authenticated callers get a higher budget than anonymous ones.
+  const authHeader = req.headers?.authorization || req.headers?.Authorization
+  const authedLimit = authHeader ? 30 : 10
+  const rl = checkRateLimit(req, { limit: authedLimit, windowMs: 60_000 })
+  res.setHeader('X-RateLimit-Remaining', String(rl.remaining))
+  if (!rl.allowed) {
+    return res.status(429).json({ error: 'Too many verification requests. Please wait a minute and retry.' })
+  }
+
+  // Optional auth by default; set REQUIRE_AUTH=true to force sign-in.
+  const auth = await authenticate(req, res, { mode: 'optional' })
+  if (!auth) return // authenticate already responded 401
+
+  let body
+  try {
+    body = await parseJsonBody(req)
+  } catch (e) {
+    return res.status(400).json({ error: 'Malformed JSON body.' })
   }
 
   const { repoUrl, milestones, techStack, tech_stack } = body

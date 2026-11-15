@@ -1,6 +1,30 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
+import Settings3 from './ui/settings-3'
 import { getUserRoadmaps } from '../lib/roadmaps'
+import Brand from './Brand'
+import {
+  LayoutDashboard,
+  Plus,
+  Eye,
+  ShieldCheck,
+  Github,
+  CalendarDays,
+  TrendingUp,
+  FolderGit2,
+  Sparkles,
+  LogOut,
+  ChevronRight,
+  User,
+} from 'lucide-react'
+import { Button } from './ui/button'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card'
+import { Badge } from './ui/badge'
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
+import { Progress } from './ui/progress'
+import { Separator } from './ui/separator'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
+import { Skeleton } from './ui/skeleton'
 
 // Common GitHub language colors
 const LANG_COLORS = {
@@ -154,360 +178,284 @@ export default function Dashboard({ onNewRoadmap, onSelectRoadmap, onHome }) {
     },
   ]
 
+  // Fallback mock roadmaps (shown when Firestore is empty)
+  const mockRoadmaps = [
+    {
+      project_title: 'GitHub Verification Agent',
+      description: 'Agentic repo analyzer that verifies milestones against live code.',
+      tech_stack: ['React', 'Gemini', 'GitHub API'],
+      milestones: [{}, {}, {}, {}],
+      mockDone: 2,
+      mockDate: 'Sep 12',
+    },
+    {
+      project_title: 'Realtime Collab Board',
+      description: 'Multiplayer whiteboard with CRDT sync and presence.',
+      tech_stack: ['TypeScript', 'WebSockets'],
+      milestones: [{}, {}, {}, {}],
+      mockDone: 1,
+      mockDate: 'Sep 8',
+    },
+    {
+      project_title: 'Rate Limiter Library (npm)',
+      description: 'Token-bucket limiter published as a zero-dep npm package.',
+      tech_stack: ['TypeScript', 'npm'],
+      milestones: [{}, {}, {}],
+      mockDone: 3,
+      mockDate: 'Sep 5',
+    },
+  ]
+  const visibleRoadmaps = roadmaps.length > 0 ? roadmaps : mockRoadmaps
+
   // Calculate stats
   const totalRoadmapsCount = roadmaps.length > 0 ? roadmaps.length : 4
   const lastVerifiedProject =
     roadmaps[0]?.project_title || displayRepos[0]?.name || 'Biuld-it'
 
+  const stats = [
+    { label: 'Roadmaps Generated', value: String(totalRoadmapsCount), sub: user ? 'saved to Firestore' : 'sign in to persist', icon: LayoutDashboard },
+    { label: 'Overall Completion', value: '38%', sub: 'across all roadmaps', icon: TrendingUp, progress: 38 },
+    { label: 'Member Since', value: formatMemberSince(user), sub: user?.email || 'GitHub OAuth', icon: CalendarDays },
+    { label: 'Last Verified', value: lastVerifiedProject, sub: '2 days ago', icon: ShieldCheck },
+  ]
+
+  const getProgress = (r, idx) => {
+    const totalM = (r.milestones || []).length || 4
+    const doneM =
+      typeof r.mockDone === 'number'
+        ? Math.min(r.mockDone, totalM)
+        : Math.min(idx === 0 ? 1 : idx === 2 ? 3 : 0, totalM)
+    const percent = totalM > 0 ? Math.round((doneM / totalM) * 100) : 0
+    return { totalM, doneM, percent }
+  }
+
   return (
-    <div className="dashboard-page">
-      <header className="header">
-        <div
-          className="header__left cursor-pointer"
-          onClick={onHome}
-          role="button"
-          tabIndex={0}
-        >
-          <div className="logo-mark">&lt;/&gt;</div>
-          <span className="logo-text">build.it</span>
-        </div>
-        <div className="header__right">
-          {user ? (
-            <>
-              <div className="user-chip">
-                {user.photoURL ? (
-                  <img
-                    src={user.photoURL}
-                    alt={displayName}
-                    className="avatar"
-                    style={{ objectFit: 'cover' }}
-                  />
-                ) : (
-                  <div className="avatar">{userInitials}</div>
-                )}
-                <span className="username">{username}</span>
-              </div>
-              <button
-                type="button"
-                className="signout"
-                onClick={() => signOut()}
-              >
-                Sign out
-              </button>
-            </>
-          ) : (
-            <button
-              type="button"
-              className="btn-sm btn-sm--accent"
-              onClick={() => signInWithGithub()}
-            >
-              Sign in with GitHub
-            </button>
-          )}
+    <div className="min-h-screen bg-bg text-textPrimary">
+      <header className="sticky top-0 z-40 border-b border-border bg-bg/80 backdrop-blur">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+          <button type="button" onClick={onHome} className="flex items-center gap-2.5">
+            <Brand size="md" />
+            <Badge variant="secondary" className="hidden sm:inline-flex">v1.0.4</Badge>
+          </button>
+          <div className="flex items-center gap-3">
+            {user ? (
+              <>
+                <div className="flex items-center gap-2.5">
+                  <Avatar className="h-8 w-8">
+                    {user.photoURL && <AvatarImage src={user.photoURL} alt={displayName} />}
+                    <AvatarFallback>{userInitials}</AvatarFallback>
+                  </Avatar>
+                  <div className="hidden leading-tight sm:block">
+                    <p className="text-[13px] font-semibold">{displayName}</p>
+                    <p className="font-mono text-[11px] text-textMuted">@{username}</p>
+                  </div>
+                </div>
+                <Separator orientation="vertical" className="h-6" />
+                <Button variant="ghost" size="sm" onClick={() => signOut()}>
+                  <LogOut className="h-3.5 w-3.5" />
+                  Sign out
+                </Button>
+              </>
+            ) : (
+              <Button size="sm" onClick={() => signInWithGithub()}>
+                <Github className="h-4 w-4" />
+                Sign in with GitHub
+              </Button>
+            )}
+          </div>
         </div>
       </header>
 
-      <div className="container">
-        <div className="page-head">
-          <div>
-            <h1>Welcome back, {displayName}</h1>
-            <p>Here's where your roadmaps and repos stand.</p>
+      <main className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-10">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="flex flex-col gap-1.5">
+            <Badge className="w-fit">
+              <Sparkles className="h-3 w-3" />
+              Dashboard
+            </Badge>
+            <h1 className="text-3xl font-extrabold tracking-tight">Welcome back, {displayName}</h1>
+            <p className="text-sm text-textMuted">Here&apos;s where your roadmaps and repos stand.</p>
           </div>
-          <button type="button" className="cta-new" onClick={onNewRoadmap}>
-            + Generate New Roadmap
-          </button>
+          <Button onClick={onNewRoadmap}>
+            <Plus className="h-4 w-4" />
+            Generate New Roadmap
+          </Button>
         </div>
 
-        {/* Stats Row */}
-        <div className="stats-row">
-          <div className="stat-card">
-            <div className="label">Roadmaps Generated</div>
-            <div className="value">{totalRoadmapsCount}</div>
-          </div>
-          <div className="stat-card">
-            <div className="label">Overall Completion</div>
-            <div className="value">38%</div>
-            <div className="sub">across all roadmaps</div>
-          </div>
-          <div className="stat-card">
-            <div className="label">Member Since</div>
-            <div className="value" style={{ fontSize: '18px' }}>
-              {formatMemberSince(user)}
+        {/* Stats Row - shadcn Cards */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {loadingRoadmaps
+            ? Array.from({ length: 4 }).map((_, i) => (
+                <Card key={i}>
+                  <CardHeader className="pb-2"><Skeleton className="h-3 w-24" /></CardHeader>
+                  <CardContent className="flex flex-col gap-2">
+                    <Skeleton className="h-7 w-16" />
+                    <Skeleton className="h-3 w-28" />
+                  </CardContent>
+                </Card>
+              ))
+            : stats.map((s) => (
+                <Card key={s.label}>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="font-mono text-[11px] font-medium uppercase tracking-wider text-textMuted">{s.label}</CardTitle>
+                    <s.icon className="h-4 w-4 text-accent" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="truncate text-2xl font-bold" title={s.value}>{s.value}</div>
+                    <p className="truncate font-mono text-[11px] text-textFaint">{s.sub}</p>
+                    {typeof s.progress === 'number' && <Progress value={s.progress} className="mt-3" />}
+                  </CardContent>
+                </Card>
+              ))}
+        </div>
+
+        <Tabs defaultValue="roadmaps" className="w-full">
+          <TabsList>
+            <TabsTrigger value="roadmaps">
+              <FolderGit2 className="mr-1.5 h-3.5 w-3.5" />
+              Roadmaps
+              <Badge variant="secondary" className="ml-2">{totalRoadmapsCount}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="repos">
+              <Github className="mr-1.5 h-3.5 w-3.5" />
+              GitHub Repos
+              <Badge variant="secondary" className="ml-2">{displayRepos.length}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="profile">
+              <User className="mr-1.5 h-3.5 w-3.5" />
+              Profile
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="roadmaps" className="mt-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {loadingRoadmaps ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <Card key={i}>
+                    <CardHeader>
+                      <Skeleton className="h-5 w-3/4" />
+                      <Skeleton className="h-3 w-full" />
+                    </CardHeader>
+                    <CardContent className="flex flex-col gap-3">
+                      <Skeleton className="h-5 w-1/2" />
+                      <Skeleton className="h-2 w-full" />
+                    </CardContent>
+                    <CardFooter className="gap-2">
+                      <Skeleton className="h-8 flex-1" />
+                      <Skeleton className="h-8 flex-1" />
+                    </CardFooter>
+                  </Card>
+                ))
+              ) : (
+                visibleRoadmaps.map((r, idx) => {
+                  const stack = Array.isArray(r.tech_stack) ? r.tech_stack : ['React', 'Node.js']
+                  const { totalM, doneM, percent } = getProgress(r, idx)
+                  const isMock = roadmaps.length === 0
+                  return (
+                    <Card key={r.id || r.project_title || idx} className="flex flex-col">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <CardTitle className="text-base leading-snug">{r.project_title || 'Untitled Roadmap'}</CardTitle>
+                          <Badge variant="secondary" className="shrink-0">{r.createdAt ? formatDate(r.createdAt) : r.mockDate || 'Recent'}</Badge>
+                        </div>
+                        <CardDescription className="line-clamp-2">{r.description || 'AI-generated spec with demoable milestones.'}</CardDescription>
+                      </CardHeader>
+                      <CardContent className="flex flex-1 flex-col gap-4">
+                        <div className="flex flex-wrap gap-1.5">
+                          {stack.slice(0, 4).map((tech) => (<Badge key={tech}>{tech}</Badge>))}
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <Progress value={percent} />
+                          <div className="flex items-center justify-between font-mono text-[11px] text-textMuted">
+                            <span>{doneM}/{totalM} done</span>
+                            <span className="text-accent">{percent}%</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                      <CardFooter className="gap-2">
+                        <Button variant="secondary" size="sm" className="flex-1" onClick={() => (isMock ? onNewRoadmap?.() : onSelectRoadmap?.(r))}>
+                          <Eye className="h-3.5 w-3.5" />View
+                        </Button>
+                        <Button size="sm" className="flex-1" onClick={() => (isMock ? onNewRoadmap?.() : onSelectRoadmap?.(r))}>
+                          <ShieldCheck className="h-3.5 w-3.5" />Verify Progress
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  )
+                })
+              )}
             </div>
-          </div>
-          <div className="stat-card">
-            <div className="label">Last Verified</div>
-            <div
-              className="value truncate max-w-[160px]"
-              style={{ fontSize: '18px' }}
-              title={lastVerifiedProject}
-            >
-              {lastVerifiedProject}
+          </TabsContent>
+
+          <TabsContent value="repos" className="mt-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <div className="flex flex-col gap-1">
+                  <CardTitle className="text-base">Your GitHub Repos</CardTitle>
+                  <CardDescription>
+                    {githubRepos.length > 0 ? `Live from @${username} (${githubRepos.length} repos)` : 'Live from GitHub — real user repositories'}
+                  </CardDescription>
+                </div>
+                {loadingRepos && <Badge variant="secondary" className="animate-pulse">syncing…</Badge>}
+              </CardHeader>
+              <CardContent className="p-0">
+                <Separator />
+                <div className="flex flex-col divide-y divide-border">
+                  {loadingRepos && githubRepos.length === 0
+                    ? Array.from({ length: 3 }).map((_, i) => (
+                        <div key={i} className="flex items-center justify-between gap-4 px-6 py-4">
+                          <div className="flex flex-col gap-2">
+                            <Skeleton className="h-4 w-40" />
+                            <Skeleton className="h-3 w-52" />
+                          </div>
+                          <Skeleton className="h-8 w-44" />
+                        </div>
+                      ))
+                    : displayRepos.map((repo) => {
+                        const lang = repo.language || 'Code'
+                        const dotColor = LANG_COLORS[lang] || '#00f0ff'
+                        const updatedText = timeAgo(repo.updated_at)
+                        return (
+                          <div key={repo.name} className="flex flex-col gap-3 px-6 py-4 transition-colors hover:bg-surfaceMuted/50 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex min-w-0 items-center gap-3">
+                              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border bg-surfaceMuted">
+                                <Github className="h-4 w-4 text-textMuted" />
+                              </span>
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold">{repo.name}</p>
+                                <p className="flex items-center gap-1.5 font-mono text-[11px] text-textMuted">
+                                  <span className="inline-block h-2 w-2 rounded-full" style={{ background: dotColor }} />
+                                  {lang} · updated {updatedText}
+                                </p>
+                              </div>
+                            </div>
+                            <Button variant="outline" size="sm" className="shrink-0" onClick={onNewRoadmap}>
+                              Verify against a roadmap
+                              <ChevronRight className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        )
+                      })}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="profile" className="mt-4">
+            <div className="flex w-full items-center justify-center">
+              <div className="w-full max-w-md">
+                <Settings3
+                  rows={[
+                    { key: 'name', label: 'Full name', value: user?.displayName || 'Builder' },
+                    { key: 'email', label: 'Email', value: user?.email || 'Not set' },
+                    { key: 'phone', label: 'Phone', value: '+1 555 0142' },
+                  ]}
+                />
+              </div>
             </div>
-            <div className="sub">2 days ago</div>
-          </div>
-        </div>
-
-        {/* Roadmaps Section */}
-        <div className="section-head">
-          <h2>Your Roadmaps</h2>
-          <span className="count">{totalRoadmapsCount} total</span>
-        </div>
-
-        <div className="roadmaps-grid">
-          {roadmaps.length > 0 ? (
-            roadmaps.map((r, idx) => {
-              const stack = Array.isArray(r.tech_stack)
-                ? r.tech_stack
-                : ['React', 'Node.js']
-              const milestones = r.milestones || []
-              const totalM = milestones.length || 4
-              const doneM = Math.min(idx === 0 ? 1 : idx === 2 ? 3 : 0, totalM)
-              const percent = Math.round((doneM / totalM) * 100)
-
-              return (
-                <div key={r.id || idx} className="roadmap-card">
-                  <div className="roadmap-card__top">
-                    <div className="roadmap-card__title">
-                      {r.project_title || 'Untitled Roadmap'}
-                    </div>
-                    <div className="roadmap-card__date">
-                      {formatDate(r.createdAt)}
-                    </div>
-                  </div>
-                  <div className="stack-row">
-                    {stack.slice(0, 4).map((tech) => (
-                      <span key={tech} className="chip">
-                        {tech}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="progress-row">
-                    <div className="progress-track">
-                      <div
-                        className="progress-fill"
-                        style={{ width: `${percent}%` }}
-                      />
-                    </div>
-                    <span className="progress-label">
-                      {doneM}/{totalM} done
-                    </span>
-                  </div>
-                  <div className="roadmap-card__actions">
-                    <button
-                      type="button"
-                      className="btn-sm btn-sm--ghost"
-                      onClick={() => onSelectRoadmap && onSelectRoadmap(r)}
-                    >
-                      View
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-sm btn-sm--accent"
-                      onClick={() => onSelectRoadmap && onSelectRoadmap(r)}
-                    >
-                      Verify Progress
-                    </button>
-                  </div>
-                </div>
-              )
-            })
-          ) : (
-            <>
-              {/* Default Mock Roadmaps from dashboard design */}
-              <div className="roadmap-card">
-                <div className="roadmap-card__top">
-                  <div className="roadmap-card__title">GitHub Verification Agent</div>
-                  <div className="roadmap-card__date">Sep 23</div>
-                </div>
-                <div className="stack-row">
-                  <span className="chip">React</span>
-                  <span className="chip">Firebase</span>
-                  <span className="chip">Gemini 3.8</span>
-                </div>
-                <div className="progress-row">
-                  <div className="progress-track">
-                    <div className="progress-fill" style={{ width: '25%' }} />
-                  </div>
-                  <span className="progress-label">1/4 done</span>
-                </div>
-                <div className="roadmap-card__actions">
-                  <button
-                    type="button"
-                    className="btn-sm btn-sm--ghost"
-                    onClick={onNewRoadmap}
-                  >
-                    View
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-sm btn-sm--accent"
-                    onClick={onNewRoadmap}
-                  >
-                    Verify Progress
-                  </button>
-                </div>
-              </div>
-
-              <div className="roadmap-card">
-                <div className="roadmap-card__top">
-                  <div className="roadmap-card__title">Distributed KV Store (Raft)</div>
-                  <div className="roadmap-card__date">Sep 18</div>
-                </div>
-                <div className="stack-row">
-                  <span className="chip">Node.js</span>
-                  <span className="chip">TCP</span>
-                  <span className="chip">Systems</span>
-                </div>
-                <div className="progress-row">
-                  <div className="progress-track">
-                    <div className="progress-fill" style={{ width: '0%' }} />
-                  </div>
-                  <span className="progress-label">0/5 done</span>
-                </div>
-                <div className="roadmap-card__actions">
-                  <button
-                    type="button"
-                    className="btn-sm btn-sm--ghost"
-                    onClick={onNewRoadmap}
-                  >
-                    View
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-sm btn-sm--accent"
-                    onClick={onNewRoadmap}
-                  >
-                    Verify Progress
-                  </button>
-                </div>
-              </div>
-
-              <div className="roadmap-card">
-                <div className="roadmap-card__top">
-                  <div className="roadmap-card__title">Anonymous Ragging Report Platform</div>
-                  <div className="roadmap-card__date">Sep 12</div>
-                </div>
-                <div className="stack-row">
-                  <span className="chip">React</span>
-                  <span className="chip">Node</span>
-                  <span className="chip">Postgres</span>
-                </div>
-                <div className="progress-row">
-                  <div className="progress-track">
-                    <div className="progress-fill" style={{ width: '70%' }} />
-                  </div>
-                  <span className="progress-label">3.5/5 done</span>
-                </div>
-                <div className="roadmap-card__actions">
-                  <button
-                    type="button"
-                    className="btn-sm btn-sm--ghost"
-                    onClick={onNewRoadmap}
-                  >
-                    View
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-sm btn-sm--accent"
-                    onClick={onNewRoadmap}
-                  >
-                    Verify Progress
-                  </button>
-                </div>
-              </div>
-
-              <div className="roadmap-card">
-                <div className="roadmap-card__top">
-                  <div className="roadmap-card__title">Rate Limiter Library (npm)</div>
-                  <div className="roadmap-card__date">Sep 5</div>
-                </div>
-                <div className="stack-row">
-                  <span className="chip">TypeScript</span>
-                  <span className="chip">npm</span>
-                </div>
-                <div className="progress-row">
-                  <div className="progress-track">
-                    <div className="progress-fill" style={{ width: '100%' }} />
-                  </div>
-                  <span className="progress-label">3/3 done</span>
-                </div>
-                <div className="roadmap-card__actions">
-                  <button
-                    type="button"
-                    className="btn-sm btn-sm--ghost"
-                    onClick={onNewRoadmap}
-                  >
-                    View
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-sm btn-sm--accent"
-                    onClick={onNewRoadmap}
-                  >
-                    Verify Progress
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* GitHub Repos Section */}
-        <div className="section-head">
-          <h2>Your GitHub Repos</h2>
-          <span className="count">
-            {githubRepos.length > 0
-              ? `Live from @${username} (${githubRepos.length} repos)`
-              : 'Live from GitHub — real user repositories'}
-          </span>
-        </div>
-
-        <div className="repos-list">
-          {displayRepos.map((repo) => {
-            const lang = repo.language || 'Code'
-            const dotColor = LANG_COLORS[lang] || '#00f0ff'
-            const updatedText = timeAgo(repo.updated_at)
-
-            return (
-              <div key={repo.name} className="repo-row">
-                <div className="repo-row__left">
-                  <svg
-                    className="repo-icon"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                  >
-                    <path d="M9 18c-4.51 2-5-2-7-2m14 4v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 6.77a5.07 5.07 0 0 0-.09-3.77s-1.18-.35-3.91 1.48a13.38 13.38 0 0 0-7 0C6.27 2.65 5.09 3 5.09 3A5.07 5.07 0 0 0 5 6.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 20.13V24" />
-                  </svg>
-                  <div>
-                    <div className="repo-name">{repo.name}</div>
-                    <div className="repo-meta">
-                      <span
-                        className="lang-dot"
-                        style={{ background: dotColor }}
-                      />
-                      <span>
-                        {lang} · updated {updatedText}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className="repo-row__action"
-                  onClick={onNewRoadmap}
-                >
-                  Verify against a roadmap
-                </button>
-              </div>
-            )
-          })}
-        </div>
-      </div>
+          </TabsContent>
+        </Tabs>
+      </main>
     </div>
   )
 }

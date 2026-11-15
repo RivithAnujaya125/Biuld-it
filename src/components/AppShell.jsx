@@ -1,14 +1,14 @@
-import { FileCode2, Github } from 'lucide-react'
+import Brand from './Brand'
+import { Github } from 'lucide-react'
+import { BeamsBackground } from './ui/beams-background'
 
-export default function AppShell({ statusLabel, subLabel, onOpenDashboard, children }) {
+export default function AppShell({ onOpenDashboard, children, beams = 'subtle' }) {
   return (
-    <div className="bg-bg min-h-screen flex flex-col">
-      <header className="bg-bg border-b border-border h-16 flex items-center justify-between px-12 shrink-0">
+    <BeamsBackground intensity={beams} className="bg-bg [&>div]:relative [&>div]:z-10">
+      <div className="flex min-h-screen flex-col">
+        <header className="relative z-10 flex h-16 shrink-0 items-center justify-between border-b border-border bg-bg px-12">
         <div className="flex items-center gap-3">
-          <div className="bg-accent/10 border-[1.5px] border-accent rounded-md w-7 h-7 flex items-center justify-center">
-            <FileCode2 size={14} className="text-accent" />
-          </div>
-          <span className="font-bold text-textPrimary text-lg">build.it</span>
+          <Brand size="md" />
           <span className="bg-border text-textMuted font-mono font-semibold text-[10px] px-1.5 py-0.5 rounded">
             v1.0.4
           </span>
@@ -34,23 +34,18 @@ export default function AppShell({ statusLabel, subLabel, onOpenDashboard, child
         </div>
       </header>
 
-      <div className="bg-surfaceMuted border-b border-border flex items-center justify-between px-12 py-3 shrink-0">
-        <div className="flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-          <span className="font-mono text-[11px] text-textMuted">{statusLabel}</span>
-        </div>
-        <span className="font-mono text-[11px] text-textFaint">{subLabel}</span>
-      </div>
+      <main className="relative z-10 flex flex-1 items-center justify-center overflow-hidden px-12 py-16">
+        <div className="relative z-10 flex w-full justify-center">{children}</div>
+      </main>
 
-      <main className="flex-1 flex items-center justify-center px-12 py-16">{children}</main>
-
-      <footer className="border-t border-border flex items-center justify-between px-12 py-6 text-textFaint text-xs shrink-0">
-        <span>© 2026 build.it. Under MIT License.</span>
+      <footer className="relative z-10 flex shrink-0 items-center justify-between border-t border-border px-12 py-6 text-xs text-textFaint">
+        <span>© 2026 <Brand size="sm" className="inline" />. Under MIT License.</span>
         <div className="flex gap-4 font-mono text-[11px]">
           <span>Terms</span>
           <span>Telemetry: Off</span>
         </div>
       </footer>
-    </div>
+      </div>
+    </BeamsBackground>
   )
 }
