@@ -18,6 +18,8 @@ import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { animate, createScope, createTimeline, stagger } from 'animejs'
 import Brand from '../components/Brand'
+import { ContainerScroll } from '../components/ui/container-scroll-animation'
+import Stats from '../components/ui/stats-04'
 import { BeamsBackground } from '../components/ui/beams-background'
 
 gsap.registerPlugin(ScrollTrigger)
@@ -326,33 +328,37 @@ export default function HomePage({ user, onOpenDashboard, onGenerate, onHome }) 
             </div>
           </div>
         </section>
-        <section className="border-t border-border px-6 py-24 md:px-10 md:py-28">
-          <div className="mx-auto max-w-6xl">
-            <div className="text-center">
-              <p className="mb-4 font-mono text-[10px] tracking-[0.18em] text-textFaint">SEE IT IN ACTION / 02</p>
-              <h2 className="font-display text-[clamp(28px,3vw,42px)] font-semibold leading-tight">
-                This isn&apos;t a mockup — here&apos;s a real one.
-              </h2>
-              <p className="mx-auto mt-4 max-w-[560px] text-sm leading-7 text-textMuted">
-                Every roadmap looks like this: one specific project, a clear reason it fits you, and milestones you can actually check off.
-              </p>
+        <section className="border-t border-border">
+          <ContainerScroll
+            titleComponent={
+              <>
+                <p className="mb-4 font-mono text-[10px] tracking-[0.18em] text-textFaint">SEE IT IN ACTION / 02</p>
+                <h2 className="font-display text-[clamp(28px,3vw,42px)] font-semibold leading-tight">
+                  This isn&apos;t a mockup — here&apos;s a real one.
+                </h2>
+                <p className="mx-auto mt-4 max-w-[560px] text-sm leading-7 text-textMuted">
+                  Every roadmap looks like this: one specific project, a clear reason it fits you, and milestones you can actually check off.
+                </p>
+              </>
+            }
+          >
+            <div className="flex items-center gap-1.5 border-b border-border bg-surfaceMuted px-4 py-3" aria-hidden="true">
+              <span className="size-2.5 rounded-full bg-border" />
+              <span className="size-2.5 rounded-full bg-border" />
+              <span className="size-2.5 rounded-full bg-border" />
+              <span className="ml-3 hidden font-mono text-[11px] text-textFaint sm:block">build.it — your roadmap</span>
             </div>
-            <div data-screenshot className="mx-auto mt-14 max-w-3xl">
-              <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-[0_20px_50px_-20px_rgba(0,0,0,0.8)]">
-                <div className="flex items-center gap-1.5 border-b border-border bg-surfaceMuted px-4 py-3" aria-hidden="true">
-                  <span className="size-2.5 rounded-full bg-border" />
-                  <span className="size-2.5 rounded-full bg-border" />
-                  <span className="size-2.5 rounded-full bg-border" />
-                  <span className="ml-3 hidden font-mono text-[11px] text-textFaint sm:block">build.it — your roadmap</span>
-                </div>
-                <div className="p-6 sm:p-8">
-                  <SampleRoadmapPreview />
-                </div>
-              </div>
-              <p className="mt-4 text-center font-mono text-[11px] text-textFaint">
-                Sample roadmap layout from build.it — powered by Gemini Flash, generated in seconds.
-              </p>
+            <div className="p-6 text-left sm:p-8">
+              <SampleRoadmapPreview />
             </div>
+          </ContainerScroll>
+          <p className="mx-auto max-w-3xl px-6 pb-24 text-center font-mono text-[11px] text-textFaint">
+            Sample roadmap layout from build.it — powered by Gemini Flash, generated in seconds.
+          </p>
+        </section>
+        <section className="border-t border-border">
+          <div data-screenshot>
+            <Stats />
           </div>
         </section>
         <section className="relative overflow-hidden border-t border-border px-6 py-[clamp(80px,10vw,140px)] text-center">

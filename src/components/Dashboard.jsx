@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import Settings3 from './ui/settings-3'
+import ProfileSettings from './ProfileSettings'
 import { getUserRoadmaps } from '../lib/roadmaps'
 import Brand from './Brand'
 import {
@@ -442,17 +442,7 @@ export default function Dashboard({ onNewRoadmap, onSelectRoadmap, onHome }) {
           </TabsContent>
 
           <TabsContent value="profile" className="mt-4">
-            <div className="flex w-full items-center justify-center">
-              <div className="w-full max-w-md">
-                <Settings3
-                  rows={[
-                    { key: 'name', label: 'Full name', value: user?.displayName || 'Builder' },
-                    { key: 'email', label: 'Email', value: user?.email || 'Not set' },
-                    { key: 'phone', label: 'Phone', value: '+1 555 0142' },
-                  ]}
-                />
-              </div>
-            </div>
+            <ProfileSettings />
           </TabsContent>
         </Tabs>
       </main>

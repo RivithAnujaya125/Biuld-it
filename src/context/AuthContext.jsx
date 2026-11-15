@@ -3,6 +3,8 @@ import {
   signInWithPopup,
   signOut as fbSignOut,
   onAuthStateChanged,
+  updateProfile as fbUpdateProfile,
+  reload as fbReload,
 } from 'firebase/auth'
 import { auth, githubProvider } from '../lib/firebase'
 
@@ -11,6 +13,7 @@ const AuthContext = createContext({
   loading: true,
   signInWithGithub: async () => {},
   signOut: async () => {},
+  updateDisplayName: async () => {},
   // Dev bypass flag so the Figma Welcome homepage can be previewed
   // without completing Firebase GitHub OAuth.
   devBypass: false,
@@ -50,8 +53,29 @@ export function AuthProvider({ children }) {
     }
   }
 
+  // Persist a new display name to the Firebase user profile so every
+  // consumer of `user` (dashboard header, greetings) picks it up.
+  const updateDisplayName = async (displayName) => {
+    const current = auth.currentUser
+    if (!current) {
+      throw new Error('You are signed out. Sign in to update your profile.')
+    }
+    const clean = String(displayName ?? '').trim()
+    if (!clean) {
+      throw new Error('Display name cannot be empty.')
+    }
+    await fbUpdateProfile(current, { displayName: clean.slice(0, 100) })
+    await fbReload(current)
+    const fresh = auth.currentUser
+    // updateProfile mutates in place without firing onAuthStateChanged,
+    // so publish a new object identity (prototype preserved so methods
+    // like getIdToken keep working) to trigger a re-render.
+    setUser(Object.assign(Object.create(Object.getPrototypeOf(fresh)), fresh))
+    return fresh
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGithub, signOut, devBypass, setDevBypass }}>
+    <AuthContext.Provider value={{ user, loading, signInWithGithub, signOut, updateDisplayName, devBypass, setDevBypass }}>
       {children}
     </AuthContext.Provider>
   )
